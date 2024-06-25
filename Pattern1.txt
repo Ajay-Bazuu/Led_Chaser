@@ -1,0 +1,85 @@
+#include <FastLED.h>
+ 
+#define DATA_PIN        D1  // Pin to which data line of WS2812 is connected
+#define LED_TYPE        WS2812B
+#define NUM_LEDS        45  // Number of LEDs in your strip
+ 
+CRGB leds[NUM_LEDS];
+CRGB currentColor = CRGB::Green;  // Initial color
+ 
+#define SOUND_SENSOR_PIN A0  // Pin to which the sound sensor is connected
+ 
+int prevSoundValue = 0;
+ 
+// Define a color palette with 20 major colors
+DEFINE_GRADIENT_PALETTE(myPalette) {
+    0,   255, 0,   0,   // Red
+   32,   255, 69,  0,   // Red-Orange
+   64,   255, 140, 0,   // Dark Orange
+   96,   255, 255, 0,   // Yellow
+  128,   0,   255, 0,   // Green
+  160,   0,   255, 255, // Cyan
+  192,   0,   0,   255, // Blue
+  224,   75,  0,   130, // Indigo
+  255,   128, 0,   128, // Purple
+  32,    0,   0,   0,   // Black
+  64,    192, 192, 192, // Silver
+  96,    128, 128, 128, // Gray
+  128,   255, 255, 255, // White
+  160,   255, 20,  147, // Deep Pink
+  192,   218, 112, 214, // Orchid
+  224,   0,   128, 128, // Teal
+  255,   255, 0,   255, // Magenta
+  32,    255, 255, 255, // White
+  64,    0,   0,   255, // Pure Blue
+  96,    255, 182, 193  // Light Pink
+};
+ 
+CRGBPalette16 palette = myPalette;
+ 
+void setup() {
+  Serial.begin(115200);
+ 
+  // Initialize the FastLED library
+  FastLED.addLeds<LED_TYPE, DATA_PIN, GRB>(leds, NUM_LEDS);
+}
+ 
+void loop() {
+  int soundValue = analogRead(SOUND_SENSOR_PIN);
+  Serial.println(soundValue);
+ 
+  // Check if there is a change in sound intensity
+  if (soundValue != prevSoundValue) {
+    // Pick a random color from the palette
+    currentColor = ColorFromPalette(palette, random(0, 255));
+ 
+    // Set all LEDs to black
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
+    FastLED.show();
+  }
+ 
+  // Map the sound value to the number of LEDs (0 to NUM_LEDS)
+  int numLedsToLight = map(soundValue, 569, 600, 0, NUM_LEDS);
+ 
+  // Ensure the mapped value is within the valid range
+  numLedsToLight = constrain(numLedsToLight, 0, NUM_LEDS);
+ 
+  // Smoothly transition between different intensities
+  fadeToBlackBy(leds, NUM_LEDS, 20);  // Adjust the fade value for smoother transitions
+ 
+  // Set the required number of LEDs based on the sound intensity
+  for (int i = 0; i < numLedsToLight; i++) {
+    // Apply brightness and contrast control
+    leds[i] = currentColor;
+    leds[i].fadeLightBy(255 * i / NUM_LEDS);  // Adjust the fade value for contrast
+  }
+ 
+  // Show the updated LED colors
+  FastLED.show();
+ 
+  // Store the current sound value for comparison in the next iteration
+  prevSoundValue = soundValue;
+ 
+  // Add a short delay to control the transition speed
+  delay(50);
+}
